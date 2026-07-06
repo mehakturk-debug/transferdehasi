@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ScouThink Dehası | Professional Scouting Database</title>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getDatabase, ref, set, onValue, update, get, child, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDH6iLioC4R0f-jT1AYlXV9iijxiCs0FdI",
+            authDomain: "scouthink-live.firebaseapp.com",
+            databaseURL: "https://scouthink-live-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "scouthink-live",
+            storageBucket: "scouthink-live.firebasestorage.app",
+            messagingSenderId: "302068502138",
+            appId: "1:302068502138:web:741c126b937873d670f5c3",
+            measurementId: "G-RHMQ0W044Z"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        window.db = getDatabase(app);
+        window.dbRefs = { ref, set, onValue, update, get, child, remove };
+    </script>
+    <style>
+        :root {
+            --bg-dark: #0f172a; --panel-dark: #1e293b; --primary: #3b82f6; --primary-hover: #2563eb;
+            --success: #10b981; --success-hover: #059669; --danger: #ef4444; --text-light: #f8fafc;
+            --text-muted: #94a3b8; --gold: #eab308; --border-color: rgba(255,255,255,0.08);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+        body { background-color: var(--bg-dark); color: var(--text-light); min-height: 100vh; padding: 10px; display: flex; flex-direction: column; align-items: center; -webkit-text-size-adjust: 100%; }
+        header { text-align: center; margin-bottom: 15px; width: 100%; }
+        header h1 { font-size: 2rem; color: var(--gold); text-transform: uppercase; letter-spacing: 1px; text-shadow: 0 2px 10px rgba(234,179,8,0.2); }
+        header p { font-size: 0.85rem; color: var(--text-muted); }
+        .container { width: 100%; max-width: 1200px; display: flex; flex-direction: column; gap: 15px; }
+        
+        .btn { color: white; padding: 12px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.95rem; transition: all 0.2s; background: var(--primary); display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
+        .btn:hover { background: var(--primary-hover); }
+        .btn:disabled { background: #475569; cursor: not-allowed; opacity: 0.6; }
+        .btn-success { background: var(--success); }
+        .btn-success:hover { background: var(--success-hover); }
+        .btn-danger { background: var(--danger); }
+        .btn-warning { background: #d97706; }
+
+        .card-panel { background: var(--panel-dark); border-radius: 12px; padding: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+        .screen { display: none; } .screen.active { display: block; }
+        
+        .stats-badge-container { display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px; }
+        .stat-badge { background: rgba(59, 130, 246, 0.15); border: 1px solid var(--primary); padding: 10px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; color: #93c5fd; text-align: center; }
+        
+        .auth-grid { display: flex; flex-direction: column; gap: 15px; }
+        .auth-box { border: 1px solid var(--border-color); padding: 15px; border-radius: 10px; background: rgba(0,0,0,0.15); display: flex; flex-direction: column; gap: 12px; }
+        .form-group { display: flex; flex-direction: column; gap: 6px; }
+        .form-group label { font-size: 0.8rem; color: var(--text-muted); font-weight: 600; }
+        .form-group input, .form-group select { background: var(--bg-dark); border: 1px solid var(--border-color); color: white; padding: 12px; border-radius: 6px; font-size: 0.95rem; outline: none; width: 100%; }
+        
+        .filter-scroller { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; max-height: 100px; overflow-y: auto; border: 1px solid var(--border-color); padding: 8px; border-radius: 6px; background: var(--bg-dark); }
+        .chk-item { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .chk-item input { width: 16px; height: 16px; }
+
+        .scouting-db-panel { margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 15px; }
+        .db-controls { display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; }
+        .db-table-wrapper { max-height: 250px; overflow: auto; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-dark); }
+        table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.8rem; min-width: 500px; }
+        th { background: #334155; padding: 10px; font-weight: 600; position: sticky; top: 0; color: white; }
+        td { padding: 10px; border-bottom: 1px solid var(--border-color); color: #e2e8f0; }
+
+        .lobby-list { margin: 15px 0; padding: 10px; background: var(--bg-dark); border-radius: 6px; border: 1px solid var(--border-color); }
+        .lobby-player { padding: 10px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; font-size: 0.9rem; }
+        
+        .dashboard { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 15px; }
+        .team-box { padding: 10px; border-radius: 8px; background: var(--panel-dark); border-top: 4px solid var(--primary); text-align: center; font-size: 0.8rem; }
+        .team-box.active-turn { border-top-color: var(--gold); background: rgba(234, 179, 8, 0.04); }
+        
+        .cards-container { display: grid; grid-template-columns: 1fr; gap: 15px; width: 100%; }
+        .player-card { background: var(--panel-dark); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; position: relative; border: 2px solid transparent; width: 100%; max-width: 400px; margin: 0 auto; cursor: pointer; transition: transform 0.2s; }
+        .player-card:hover { transform: translateY(-2px); }
+        .card-header { background: linear-gradient(135deg, #334155, #1e293b); padding: 15px; text-align: center; min-height: 80px; display: flex; flex-direction: column; justify-content: center; }
+        .secret-name { font-size: 1.2rem; font-weight: 700; color: #cbd5e1; }
+        .revealed-name { font-size: 1.3rem; font-weight: bold; color: var(--gold); display: none; }
+        .card-body { padding: 15px; flex-grow: 1; display: flex; flex-direction: column; gap: 8px; }
+        .stat-row { display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 4px; font-size: 0.85rem; }
+        .value-box { margin-top: 5px; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 6px; text-align: center; }
+        .current-value-box { display: none; margin-top: 8px; background: rgba(16, 185, 129, 0.1); padding: 8px; border-radius: 6px; text-align: center; }
+        .card-badge { position: absolute; top: 8px; right: 8px; color: white; padding: 4px 10px; font-size: 0.75rem; font-weight: bold; border-radius: 20px; display: none; z-index: 5; }
+        .round-info { text-align: center; font-size: 1.1rem; font-weight: 600; margin-bottom: 10px; color: var(--gold); }
+        .loading-overlay { text-align: center; padding: 15px; color: var(--gold); font-weight: 600; display: none; }
+
+        .powerup-container { display: flex; justify-content: center; gap: 8px; margin-bottom: 15px; flex-wrap: wrap; }
+        .powerup-btn { font-size: 0.8rem; padding: 8px 12px; background: #334155; border: 1px solid var(--border-color); border-radius: 6px; color: white; cursor: pointer; transition: all 0.2s; }
+        .powerup-btn:disabled { opacity: 0.3; cursor: not-allowed; text-decoration: line-through; }
+        .powerup-btn.active { background: var(--gold); color: black; font-weight: bold; }
+
+        .dice-panel { background: rgba(0,0,0,0.2); border: 2px dashed var(--primary); border-radius: 10px; padding: 15px; text-align: center; margin-bottom: 15px; }
+        .dice-display { font-size: 3rem; margin: 5px 0; display: inline-block; transition: transform 0.6s ease-out; }
+        .dice-spinning { animation: spinDice 0.6s linear infinite; }
+        @keyframes spinDice {
+            0% { transform: rotate(0deg) scale(1); }
+            50% { transform: rotate(180deg) scale(1.2); }
+            100% { transform: rotate(360deg) scale(1); }
+        }
+
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 100; align-items: center; justify-content: center; padding: 20px; }
+        .modal-content { background: var(--panel-dark); border: 2px solid var(--gold); border-radius: 12px; width: 100%; max-width: 400px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); position: relative; }
+        .modal-close { position: absolute; top: 10px; right: 15px; font-size: 1.5rem; cursor: pointer; color: var(--text-muted); }
+
+        @media (min-width: 600px) {
+            body { padding: 20px; }
+            header h1 { font-size: 2.5rem; }
+            .stats-badge-container { flex-direction: row; }
+            .stat-badge { flex: 1; font-size: 0.9rem; }
+            .auth-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 25px; }
+            .db-controls { grid-template-columns: 2fr 1fr 1fr; display: grid; }
+            .dashboard { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+            .cards-container { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 25px; }
+            .player-card { max-width: 100%; margin: 0; }
+            .team-box { font-size: 0.9rem; padding: 15px; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>ScouThink Dehası</h1>
+        <p>Bulut Tabanlı Gerçek Zamanlı Stratejik Scouting ve Bütçe Simülasyonu</p>
+    </header>
+
+    <div class="container">
+        
+        <div class="card-panel screen active" id="authScreen">
+            
+            <div class="stats-badge-container">
+                <div class="stat-badge" id="lblTotalDbCount">Sistem Oyuncu Sayısı: Yükleniyor...</div>
+                <div class="stat-badge" style="border-color: var(--gold); color: var(--gold);" id="lblFilteredPoolCount">Filtrelere Uygun Havuz: 0</div>
+            </div>
+
+            <h2>Yarışma Kurulum & Scouting</h2>
+            
+            <div class="auth-grid">
+                <div class="auth-box">
+                    <h3>1. Moderatör Ayarları</h3>
+                    <div class="form-group">
+                        <label>Kullanıcı Adınız</label>
+                        <input type="text" id="modName" value="Moderatör">
+                    </div>
+                    
+                    <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                        <div class="form-group">
+                            <label>Başlangıç Bütçesi (€m)</label>
+                            <input type="number" id="setupBudget" value="200" min="10" max="1000">
+                        </div>
+                        <div class="form-group">
+                            <label>Bütçe Tipi</label>
+                            <select id="budgetType" onchange="document.getElementById('setupBudget').disabled = (this.value==='unlimited')">
+                                <option value="limited">Moderatör Belirlesin</option>
+                                <option value="unlimited">Sınırsız Bütçe</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Oyun Modu / Tur Yapısı</label>
+                        <select id="gameModeSelect">
+                            <option value="squad" selected>Dengeli 11 Kurma (4 Klasik Tur)</option>
+                            <option value="10">Serbest Döngü - 10 Tur</option>
+                            <option value="20">Serbest Döngü - 20 Tur</option>
+                            <option value="30">Serbest Döngü - 30 Tur</option>
+                            <option value="40">Serbest Döngü - 40 Tur</option>
+                            <option value="50">Serbest Döngü - 50 Tur</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Oynanacak Lig Seçimi</label>
+                        <div class="filter-scroller" id="leagueContainer"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Ülke / Uyruk Seçimi</label>
+                        <div class="filter-scroller" id="nationalityContainer"></div>
+                    </div>
+
+                    <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                        <div class="form-group">
+                            <label>Min Piyasa (€m)</label>
+                            <input type="number" id="minPrice" value="0" step="0.5">
+                        </div>
+                        <div class="form-group">
+                            <label>Max Piyasa (€m)</label>
+                            <input type="number" id="maxPrice" value="150" step="0.5">
+                        </div>
+                    </div>
+                    <div class="loading-overlay" id="roomLoadingText">Bulut havuzu optimize ediliyor...</div>
+                    <button class="btn btn-success" id="btnCreateRoom" disabled>Bulut Odası Oluştur</button>
+                </div>
+
+                <div class="auth-box" style="justify-content: center;">
+                    <h3>2. Oyuncu Girişi</h3>
+                    <div class="form-group">
+                        <label>Kullanıcı/Takım Adınız</label>
+                        <input type="text" id="playerName" placeholder="Örn: Sinners">
+                    </div>
+                    <div class="form-group">
+                        <label>Oda Giriş Kodu</label>
+                        <input type="text" id="inputRoomCode" placeholder="6 Haneli Kod Girin" style="text-transform: uppercase;">
+                    </div>
+                    <button class="btn" id="btnJoinRoom">Odaya Bağlan</button>
+                </div>
+            </div>
+
+            <div class="scouting-db-panel">
+                <h3 style="margin-bottom: 12px; color: var(--primary); font-size: 1.1rem;">📊 Global Canlı Scouting Veritabanı</h3>
+                <div class="db-controls">
+                    <input type="text" id="dbSearchInput" placeholder="Futbolcu ismi veya takım ara..." style="margin-bottom:8px;">
+                    <select id="dbSortField" style="margin-bottom:8px;">
+                        <option value="numericPrice">Piyasa Değerine Göre</option>
+                        <option value="tam_isim">Oyuncu Adına Göre</option>
+                        <option value="su_anki_lig">Lige Göre</option>
+                        <option value="uyruk">Ülkeye Göre</option>
+                    </select>
+                    <select id="dbSortOrder" style="margin-bottom:8px;">
+                        <option value="desc">Azalan (En Yüksek)</option>
+                        <option value="asc">Artan (En Düşük)</option>
+                    </select>
+                </div>
+                <div class="db-table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Oyuncu Adı</th>
+                                <th>Mevcut Takım</th>
+                                <th>Lig</th>
+                                <th>Ülke</th>
+                                <th>Piyasa Değeri</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dbTableBody">
+                            <tr><td colspan="5" style="text-align:center; color:var(--text-muted);">Bulut havuzu bekleniyor...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="card-panel screen" id="lobbyScreen">
+            <h2 id="lobbyTitle">Oda Kodu: -</h2>
+            <div class="lobby-list" id="lobbyListContainer"></div>
+            <button class="btn btn-success" id="btnStartGame" style="display: none; width: 100%;">Yarışmayı Başlat!</button>
+        </div>
+
+        <div class="dice-panel" id="dicePanel" style="display:none;">
+            <h3 id="diceStatusText" style="font-size:1rem;">Sıralama Belirleniyor: Zar Atın!</h3>
+            <div class="dice-display" id="diceDisplay">🎲</div>
+            <button class="btn btn-success" id="btnRollDice" style="width: 100%; max-width: 250px;">Zar At (1-6)</button>
+            <div id="rolledList" style="margin-top:10px; font-size:0.8rem; color:var(--text-muted); text-align: left; padding-left: 10px;"></div>
+        </div>
+
+        <div class="powerup-container" id="powerupContainer" style="display:none;">
+            <button class="powerup-btn" id="pwDouble" onclick="usePowerUp('double')">⚡ Zarı x2 Yap</button>
+            <button class="powerup-btn" id="pwSwap" onclick="usePowerUp('swap')">🔄 En Yüksek Atanla Değiş</button>
+            <button class="powerup-btn" id="pwPass" onclick="usePowerUp('pass')">🛡️ Pas Geç</button>
+        </div>
+
+        <div class="dashboard" id="gameDashboard"></div>
+        <div class="card-panel screen" id="gameScreen">
+            <div class="round-info" id="roundInfo">Mevki Turu: 1</div>
+            <div class="cards-container" id="cardsContainer"></div>
+            <div style="text-align:center; margin-top:20px; display:flex; flex-direction:column; gap:10px;">
+                <button class="btn btn-success" id="btnModNextPhase" style="display: none; width: 100%;">Gerçek Değerleri Aç (Mod)</button>
+                <button class="btn btn-danger" id="btnModEndGame" style="display: none; width: 100%;">Turnuvayı Sonlandır</button>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="modal-overlay" id="profileModal" onclick="closeProfileModal()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <span class="modal-close" onclick="closeProfileModal()">&times;</span>
+            <h3 id="modalPlayerName" style="color:var(--gold); margin-bottom:15px;">Futbolcu Detayı</h3>
+            <div style="display:flex; flex-direction:column; gap:10px; font-size:0.9rem;" id="modalBody"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        const state = { globalPlayers: [], filteredPool: [], roomCode: null, myId: null, myName: "", isMod: false, currentRoomData: null, audioAnalyzed: false, activeJoker: null };
+        const colors = ['#3b82f6', '#ef4444', '#10b981', '#eab308', '#a855f7'];
+        const squadRoles = ["Bilinmiyor", "Kaleci (GK)", "Defans (DEF)", "Orta Saha (MID)", "Forvet (FWD)"];
+
+        const authScreen = document.getElementById('authScreen');
+        const lobbyScreen = document.getElementById('lobbyScreen');
+        const gameScreen = document.getElementById('gameScreen');
+        const gameDashboard = document.getElementById('gameDashboard');
+        const cardsContainer = document.getElementById('cardsContainer');
+        const roundInfo = document.getElementById('roundInfo');
+        const btnCreateRoom = document.getElementById('btnCreateRoom');
+        const btnJoinRoom = document.getElementById('btnJoinRoom');
+        const btnStartGame = document.getElementById('btnStartGame');
+        const btnModNextPhase = document.getElementById('btnModNextPhase');
+        const btnModEndGame = document.getElementById('btnModEndGame');
+        
+        const dicePanel = document.getElementById('dicePanel');
+        const diceStatusText = document.getElementById('diceStatusText');
+        const diceDisplay = document.getElementById('diceDisplay');
+        const btnRollDice = document.getElementById('btnRollDice');
+        const rolledList = document.getElementById('rolledList');
+        const powerupContainer = document.getElementById('powerupContainer');
+
+        const leagueContainer = document.getElementById('leagueContainer');
+        const nationalityContainer = document.getElementById('nationalityContainer');
+        const lblTotalDbCount = document.getElementById('lblTotalDbCount');
+        const lblFilteredPoolCount = document.getElementById('lblFilteredPoolCount');
+        const roomLoadingText = document.getElementById('roomLoadingText');
+        
+        const dbSearchInput = document.getElementById('dbSearchInput');
+        const dbSortField = document.getElementById('dbSortField');
+        const dbSortOrder = document.getElementById('dbSortOrder');
+        const dbTableBody = document.getElementById('dbTableBody');
+
+        function playSound(type) {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator(); const gain = ctx.createGain();
+                osc.connect(gain); gain.connect(ctx.destination);
+                if (type === 'dice') {
+                    osc.type = 'triangle'; osc.frequency.setValueAtTime(150, ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(600, ctx.currentTime + 0.15);
+                    gain.gain.setValueAtTime(0.3, ctx.currentTime); gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.15);
+                    osc.start(); osc.stop(ctx.currentTime + 0.15);
+                } else if (type === 'buy') {
+                    osc.type = 'sine'; osc.frequency.setValueAtTime(523.25, ctx.currentTime);
+                    osc.frequency.setValueAtTime(659.25, ctx.currentTime + 0.1);
+                    gain.gain.setValueAtTime(0.2, ctx.currentTime); gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.25);
+                    osc.start(); osc.stop(ctx.currentTime + 0.25);
+                } else if (type === 'reveal') {
+                    osc.type = 'square'; osc.frequency.setValueAtTime(300, ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(800, ctx.currentTime + 0.3);
+                    gain.gain.setValueAtTime(0.15, ctx.currentTime); gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.3);
+                    osc.start(); osc.stop(ctx.currentTime + 0.3);
+                }
+            } catch(e) { console.warn("Ses pasif."); }
+        }
+
+        function aiSpeak(text) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'tr-TR'; utterance.rate = 1.1; window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        function parsePrice(priceStr) {
+            if (!priceStr) return 0;
+            const match = priceStr.match(/€([\d.]+)([mKk]?)/);
+            if (match) {
+                let val = parseFloat(match[1]);
+                if (match[2].toLowerCase() === 'k') val = val / 1000;
+                return val;
+            }
+            return 0;
+        }
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const snapshot = await window.dbRefs.get(window.dbRefs.ref(window.db, 'master_players'));
+                if(!snapshot.exists()) { lblTotalDbCount.innerText = "Sistem Durumu: Boş"; return; }
+
+                state.globalPlayers = Object.values(snapshot.val());
+                lblTotalDbCount.innerText = `Sistem Oyuncu Sayısı: ${state.globalPlayers.length}`;
+
+                const leagues = new Set(); const nationalities = new Set();
+                state.globalPlayers.forEach(p => {
+                    if(p.su_anki_lig) leagues.add(p.su_anki_lig);
+                    if(p.uyruk) nationalities.add(p.uyruk);
+                });
+
+                leagueContainer.innerHTML = '';
+                Array.from(leagues).sort().forEach(lg => {
+                    leagueContainer.insertAdjacentHTML('beforeend', `
+                        <label class="chk-item"><input type="checkbox" class="league-chk" value="${lg}" checked> ${lg}</label>
+                    `);
+                });
+
+                nationalityContainer.innerHTML = '';
+                Array.from(nationalities).sort().forEach(nat => {
+                    nationalityContainer.insertAdjacentHTML('beforeend', `
+                        <label class="chk-item"><input type="checkbox" class="nat-chk" value="${nat}" checked> ${nat}</label>
+                    `);
+                });
+
+                document.querySelectorAll('.league-chk, .nat-chk, #minPrice, #maxPrice').forEach(el => {
+                    el.addEventListener('change', calculateCurrentPoolSize);
+                });
+
+                calculateCurrentPoolSize(); renderScoutingDatabaseTable();
+                btnCreateRoom.disabled = false;
+
+                const savedRoomCode = sessionStorage.getItem('scouthink_roomCode');
+                const savedMyId = sessionStorage.getItem('scouthink_myId');
+                const savedMyName = sessionStorage.getItem('scouthink_myName');
+                const savedIsMod = sessionStorage.getItem('scouthink_isMod');
+
+                if (savedRoomCode && savedMyId && savedMyName) {
+                    state.roomCode = savedRoomCode; state.myId = savedMyId; state.myName = savedMyName; state.isMod = (savedIsMod === 'true');
+                    initLobbySync();
+                }
+
+            } catch(err) { console.error("Firebase Veri Hatası:", err); }
+        });
+
+        function calculateCurrentPoolSize() {
+            const selectedLeagues = Array.from(document.querySelectorAll('.league-chk:checked')).map(el => el.value);
+            const selectedNationalities = Array.from(document.querySelectorAll('.nat-chk:checked')).map(el => el.value);
+            const minP = parseFloat(document.getElementById('minPrice').value) || 0;
+            const maxP = parseFloat(document.getElementById('maxPrice').value) || 999;
+
+            state.filteredPool = state.globalPlayers.filter(p => {
+                const price = p.numericPrice || 0;
+                const lgMatch = selectedLeagues.includes(p.su_anki_lig);
+                const natMatch = p.uyruk ? selectedNationalities.includes(p.uyruk) : true;
+                return lgMatch && natMatch && price >= minP && price <= maxP;
+            });
+            lblFilteredPoolCount.innerText = `Filtrelere Uygun Havuz: ${state.filteredPool.length} Oyuncu`;
+        }
+
+        function renderScoutingDatabaseTable() {
+            const query = dbSearchInput.value.toLowerCase().trim();
+            const field = dbSortField.value; const order = dbSortOrder.value;
+            let result = [...state.globalPlayers];
+
+            if(query) {
+                result = result.filter(p => 
+                    (p.tam_isim && p.tam_isim.toLowerCase().includes(query)) ||
+                    (p.su_anki_takim && p.su_anki_takim.toLowerCase().includes(query))
+                );
+            }
+
+            result.sort((a, b) => {
+                let valA = a[field] ?? ''; let valB = b[field] ?? '';
+                if (typeof valA === 'string') { return order === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA); }
+                else { return order === 'asc' ? valA - valB : valB - valA; }
+            });
+
+            dbTableBody.innerHTML = '';
+            if(result.length === 0) {
+                dbTableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">Aranan kritere uygun veri bulunamadı.</td></tr>`;
+                return;
+            }
+
+            result.slice(0, 150).forEach(p => {
+                dbTableBody.insertAdjacentHTML('beforeend', `
+                    <tr>
+                        <td style="font-weight:600; color:var(--gold);">${p.tam_isim || 'Bilinmiyor'}</td>
+                        <td>${p.su_anki_takim || 'Serbest'}</td>
+                        <td><span style="color:#60a5fa">${p.su_anki_lig || 'Diğer'}</span></td>
+                        <td>${p.uyruk || '-'}</td>
+                        <td style="font-weight:bold; color:var(--success);">${p.piyasa_degeri ? p.piyasa_degeri.split(' ')[0] : '€0'}</td>
+                    </tr>
+                `);
+            });
+        }
+
+        btnCreateRoom.addEventListener('click', async function() {
+            calculateCurrentPoolSize();
+            if(state.filteredPool.length < 30) { alert(`Mevcut havuz oyuncu sayısı turnuva için yetersiz (${state.filteredPool.length}).`); return; }
+
+            state.isMod = true; state.myName = document.getElementById('modName').value.trim() || "Moderatör";
+            state.roomCode = Math.random().toString(36).substring(2, 8).toUpperCase(); state.myId = "player_0";
+
+            sessionStorage.setItem('scouthink_roomCode', state.roomCode);
+            sessionStorage.setItem('scouthink_myId', state.myId);
+            sessionStorage.setItem('scouthink_myName', state.myName);
+            sessionStorage.setItem('scouthink_isMod', 'true');
+
+            btnCreateRoom.style.display = 'none'; roomLoadingText.style.display = 'block';
+            state.filteredPool.sort(() => Math.random() - 0.5);
+
+            const isUnlimited = document.getElementById('budgetType').value === 'unlimited';
+            const startingBudget = isUnlimited ? 99999 : parseFloat(document.getElementById('setupBudget').value) || 200;
+            const modeVal = document.getElementById('gameModeSelect').value;
+            const maxRounds = modeVal === 'squad' ? 4 : parseInt(modeVal);
+
+            const roomSchema = {
+                code: state.roomCode, status: "lobby", currentRound: 1, phase: "dice", turnIndex: 0,
+                pool: state.filteredPool.slice(0, 200), maxRounds: maxRounds, isSquadMode: (modeVal === 'squad'), isUnlimited: isUnlimited,
+                players: {
+                    "player_0": { id: "player_0", name: state.myName, budget: startingBudget, spent: 0, currentVal: 0, profit: 0, isMod: true, color: colors[0], currentRoundProfit: 0, usedJokers: { double:false, swap:false, pass:false }, squadPower: 0 }
+                }
+            };
+
+            await window.dbRefs.set(window.dbRefs.ref(window.db, 'rooms/' + state.roomCode), roomSchema);
+            initLobbySync();
+        });
+
+        btnJoinRoom.addEventListener('click', async function() {
+            const rCode = document.getElementById('inputRoomCode').value.trim().toUpperCase();
+            const pName = document.getElementById('playerName').value.trim() || "Oyuncu";
+            if(!rCode) return alert("Oda kodu eksik.");
+
+            const snapshot = await window.dbRefs.get(window.dbRefs.child(window.dbRefs.ref(window.db), `rooms/${rCode}`));
+            if (!snapshot.exists()) return alert("Oda aktif değil.");
+
+            const roomData = snapshot.val();
+            if(roomData.status !== "lobby") return alert("Yarışma başladı, katılamazsınız.");
+
+            const pCount = Object.keys(roomData.players || {}).length;
+            state.myId = `player_${pCount}`; state.roomCode = rCode; state.myName = pName; state.isMod = false;
+
+            sessionStorage.setItem('scouthink_roomCode', state.roomCode);
+            sessionStorage.setItem('scouthink_myId', state.myId);
+            sessionStorage.setItem('scouthink_myName', state.myName);
+            sessionStorage.setItem('scouthink_isMod', 'false');
+
+            const startingBudget = roomData.isUnlimited ? 99999 : roomData.players["player_0"].budget;
+
+            await window.dbRefs.set(window.dbRefs.ref(window.db, `rooms/${rCode}/players/${state.myId}`), {
+                id: state.myId, name: pName, budget: startingBudget, spent: 0, currentVal: 0, profit: 0, isMod: false, color: colors[pCount % colors.length], currentRoundProfit: 0, usedJokers: { double:false, swap:false, pass:false }, squadPower: 0
+            });
+            initLobbySync();
+        });
+
+        function initLobbySync() {
+            authScreen.classList.remove('active'); lobbyScreen.classList.add('active');
+            document.getElementById('lobbyTitle').innerText = `Oda Giriş Kodu: ${state.roomCode}`;
+            if(state.isMod) btnStartGame.style.display = "inline-block";
+
+            window.dbRefs.onValue(window.dbRefs.ref(window.db, `rooms/${state.roomCode}`), (snapshot) => {
+                const data = snapshot.val(); if (!data) return;
+                state.currentRoomData = data;
+                if (data.status === "playing") { initGameArena(); return; }
+
+                const lobbyListContainer = document.getElementById('lobbyListContainer');
+                if(lobbyListContainer) lobbyListContainer.innerHTML = '';
+
+                Object.values(data.players).forEach(p => {
+                    if(lobbyListContainer) {
+                        lobbyListContainer.insertAdjacentHTML('beforeend', `<div class="lobby-player"><span style="font-weight:600; color:${p.color}">${p.name}</span><span>${p.isMod ? 'Moderatör':'Oyuncu'}</span></div>`);
+                    }
+                });
+            });
+        }
+
+        btnStartGame.addEventListener('click', async function() {
+            const players = Object.values(state.currentRoomData.players);
+            if(players.length < 2) return alert("Yarışma için en az 2 oyuncu gereklidir.");
+            const size = players.length + 1;
+            const roundPool = state.currentRoomData.pool.slice(0, size);
+
+            await window.dbRefs.update(window.dbRefs.ref(window.db, `rooms/${state.roomCode}`), {
+                status: "playing", phase: "dice", currentRoundPool: roundPool, selectedInRound: {}, dices: {}
+            });
+        });
+
+        function initGameArena() {
+            lobbyScreen.classList.remove('active'); gameScreen.classList.add('active'); 
+            gameDashboard.style.display = 'grid'; dicePanel.style.display = 'block'; powerupContainer.style.display = 'flex';
+            if(state.isMod) { btnModNextPhase.style.display = 'inline-block'; document.getElementById('btnModEndGame').style.display = 'inline-block'; }
+
+            window.dbRefs.onValue(window.dbRefs.ref(window.db, `rooms/${state.roomCode}`), (snapshot) => {
+                const data = snapshot.val(); if(!data) return;
+                state.currentRoomData = data;
+                if(data.status === "finished") { renderLeaderboard(); return; }
+                
+                handleDicePhase(data);
+                syncJokerButtons(data.players[state.myId]?.usedJokers);
+                renderDashboard(data.players, data.turnOrder, data.turnIndex, data.phase, data.isUnlimited);
+                renderArenaCards(data);
+                
+                if (data.phase === "reveal" && !state.audioAnalyzed) {
+                    state.audioAnalyzed = true; playSound('reveal'); generateAndPlayAIAnalysis(data.players);
+                }
+                if (data.phase !== "reveal") { state.audioAnalyzed = false; }
+            });
+        }
+
+        function syncJokerButtons(usedJokers) {
+            if(!usedJokers) return;
+            document.getElementById('pwDouble').disabled = usedJokers.double;
+            document.getElementById('pwSwap').disabled = usedJokers.swap;
+            document.getElementById('pwPass').disabled = usedJokers.pass;
+
+            document.getElementById('pwDouble').classList.toggle('active', state.activeJoker === 'double');
+            document.getElementById('pwSwap').classList.toggle('active', state.activeJoker === 'swap');
+            document.getElementById('pwPass').classList.toggle('active', state.activeJoker === 'pass');
+        }
+
+        window.usePowerUp = function(type) {
+            if(state.activeJoker === type) { state.activeJoker = null; } 
+            else { state.activeJoker = type; }
+            syncJokerButtons(state.currentRoomData.players[state.myId]?.usedJokers);
+        }
+
+        function handleDicePhase(data) {
+            const dices = data.dices || {}; const players = Object.values(data.players);
+            rolledList.innerHTML = "<strong>Atılan Zarlar:</strong><br>";
+            players.forEach(p => {
+                const rawData = dices[p.id]; const pDice = rawData ? rawData.value : "-";
+                const jokerHint = rawData?.joker ? ` (${rawData.joker.toUpperCase()})` : '';
+                rolledList.insertAdjacentHTML('beforeend', `<span style="color:${p.color}">${p.name}:</span> 🎲 ${pDice}${jokerHint}<br>`);
+            });
+
+            if (data.phase === "dice") {
+                dicePanel.style.display = 'block'; cardsContainer.style.opacity = '0.3'; cardsContainer.style.pointerEvents = 'none';
+                const modeLabel = data.isSquadMode ? `Mevki: ${squadRoles[data.currentRound] || 'Futbolcu'}` : `Tur: ${data.currentRound} / ${data.maxRounds}`;
+                diceStatusText.innerText = `Sıralama Belirleniyor: Zar Atın! | ${modeLabel}`;
+                
+                if (dices[state.myId] !== undefined) { btnRollDice.disabled = true; diceDisplay.innerText = `🎲 ${dices[state.myId].value}`; } 
+                else { btnRollDice.disabled = false; diceDisplay.innerText = `🎲`; }
+
+                if (state.isMod && Object.keys(dices).length === players.length) {
+                    const sortedOrder = Object.keys(dices).sort((a, b) => {
+                        if (dices[b].value === dices[a].value) { return dices[a].timestamp - dices[b].timestamp; }
+                        return dices[b].value - dices[a].value;
+                    });
+                    window.dbRefs.update(window.dbRefs.ref(window.db, `rooms/${state.roomCode}`), { phase: "select", turnOrder: sortedOrder, turnIndex: 0 });
+                }
+            } else { dicePanel.style.display = 'none'; cardsContainer.style.opacity = '1'; cardsContainer.style.pointerEvents = 'auto'; }
+        }
+
+        btnRollDice.addEventListener('click', async () => {
+            playSound('dice');
+            diceDisplay.classList.add('dice-spinning');
+            
+            setTimeout(async () => {
+                diceDisplay.classList.remove('dice-spinning');
+                let standardDice = Math.floor(Math.random() * 6) + 1;
+                let usedType = state.activeJoker;
+
+                if (state.activeJoker === 'double') { standardDice = standardDice * 2; }
+                if (state.activeJoker === 'pass') { standardDice = 0; }
+
+                const updates = {};
+                updates[`rooms/${state.roomCode}/dices/${state.myId}`] = { value: standardDice, timestamp: Date.now(), joker: usedType || null };
+                
+                if (usedType) {
+                    const p = { ...state.currentRoomData.players[state.myId] };
+                    p.usedJokers[usedType] = true;
+                    updates[`rooms/${state.roomCode}/players/${state.myId}`] = p;
+                }
+
+                state.activeJoker = null;
+                await window.dbRefs.update(window.dbRefs.ref(window.db), updates);
+            }, 600);
+        });
+
+        function generateAndPlayAIAnalysis(players) {
+            const plist = Object.values(players);
+            const roundSorted = [...plist].sort((a,b) => b.currentRoundProfit - a.currentRoundProfit);
+            const globalSorted = [...plist].sort((a,b) => b.profit - a.profit);
+            let report = `Tur bitti. En yüksek kârı ${roundSorted[0].name} yaptı. Genel tabloda ${globalSorted[0].name} lider.`;
+            aiSpeak(report);
+        }
+
+        function renderDashboard(players, turnOrder, turnIndex, phase, isUnlimited) {
+            gameDashboard.innerHTML = ''; if(!turnOrder) return;
+            const activePlayerId = turnOrder[turnIndex];
+            Object.values(players).forEach(p => {
+                const isCurrent = (p.id === activePlayerId && phase === "select");
+                const budgetStr = isUnlimited ? "Sınırsız" : `€${p.budget.toFixed(1)}m`;
+                gameDashboard.insertAdjacentHTML('beforeend', `
+                    <div class="team-box ${isCurrent ? 'active-turn' : ''}" style="border-top-color: ${p.color}">
+                        <div style="font-weight:bold; color:${p.color}">${p.name} ${p.id === state.myId ? '(Siz)':''}</div>
+                        <div>Kalan Bütçe: <strong style="color:var(--gold)">${budgetStr}</strong></div>
+                        <div style="font-size:0.75rem; color:var(--text-muted)">Toplam Kâr: €${p.profit.toFixed(1)}m</div>
+                    </div>
+                `);
+            });
+        }
+
+        function renderArenaCards(data) {
+            if(!data.turnOrder || !data.players) return;
+            const activePlayerId = data.turnOrder[data.turnIndex];
+            const isMyTurn = (activePlayerId === state.myId && data.phase === "select");
+            const myBudget = data.players[state.myId]?.budget || 0;
+            const roundLabel = data.isSquadMode ? `Mevki: ${squadRoles[data.currentRound] || 'Futbolcu'}` : `Tur: ${data.currentRound} / ${data.maxRounds}`;
+            
+            roundInfo.innerHTML = `${roundLabel} | Sıra: <span style="color:var(--gold)">${data.players[activePlayerId]?.name || 'Zarlar Bekleniyor'}</span>`;
+            cardsContainer.innerHTML = ''; if(!data.currentRoundPool) return;
+
+            data.currentRoundPool.forEach((player, index) => {
+                if(!player) return;
+                let baseCost = player.numericPrice * 0.6; let costYearHint = "Başlangıç Değeri";
+
+                if (player.kariyer_gecmisi && player.kariyer_gecmisi.length > 0) {
+                    const firstTransfer = player.kariyer_gecmisi[0];
+                    if (firstTransfer && firstTransfer.bonservis_bedeli) {
+                        const parsedBonservis = parsePrice(firstTransfer.bonservis_bedeli);
+                        if (parsedBonservis > 0) { baseCost = parsedBonservis; if (firstTransfer.sezon) { costYearHint = `${firstTransfer.sezon} Sezonu`; } }
+                    }
+                }
+
+                const currentVal = player.numericPrice || 0;
+                const oldTeam = player.kariyer_gecmisi && player.kariyer_gecmisi.length > 0 ? player.kariyer_gecmisi[player.kariyer_gecmisi.length - 1].eski_takim : "Bilinmiyor";
+                
+                // Kapalıyken stratejik tahmin için eklenen ekstra ipucu hesaplamaları
+                const transferSayisi = player.kariyer_gecmisi ? player.kariyer_gecmisi.length : 0;
+                
+                let ageHint = "Gizli";
+                if (player.dogum_tarihi) {
+                    // Doğum yılı formatına göre kaba yaş aralığı tahmini
+                    const yearMatch = player.dogum_tarihi.match(/\d{4}/);
+                    if (yearMatch) {
+                        const age = 2026 - parseInt(yearMatch[0]);
+                        if (age < 23) ageHint = "Genç Yetenek (U23)";
+                        else if (age <= 29) ageHint = "Olgun Yaş (24-29)";
+                        else ageHint = "Tecrübeli (30+)";
+                    }
+                }
+
+                let selectedBy = null;
+                if(data.selectedInRound) { Object.entries(data.selectedInRound).forEach(([pId, cIdx]) => { if(cIdx === index) selectedBy = data.players[pId]; }); }
+                const showReveal = (data.phase === "reveal");
+                
+                const canAfford = data.isUnlimited || (myBudget >= baseCost);
+
+                cardsContainer.insertAdjacentHTML('beforeend', `
+                    <div class="player-card" style="border-color: ${selectedBy ? selectedBy.color : 'transparent'}" onclick="openProfileModal(${index})">
+                        <div class="card-badge" style="display:${selectedBy ? 'block':'none'}; background-color:${selectedBy?.color}">${selectedBy?.name}</div>
+                        <div class="card-header">
+                            <div class="secret-name" style="display:${showReveal ? 'none':'block'}">⚽ Gizli Futbolcu ?</div>
+                            <div class="revealed-name" style="display:${showReveal ? 'block':'none'}">${player.tam_isim}</div>
+                        </div>
+                        <div class="card-body">
+                            <div class="stat-row"><span>Lig:</span><span>${player.su_anki_lig || 'Diğer'}</span></div>
+                            <div class="stat-row"><span>İpucu (Uyruk):</span><span style="color: var(--primary); font-weight: 600;">${player.uyruk || 'Bilinmiyor'}</span></div>
+                            <div class="stat-row"><span>İpucu (Kariyer):</span><span>${transferSayisi} Farklı Transfer</span></div>
+                            <div class="stat-row"><span>İpucu (Yaş Grubu):</span><span style="color: #a855f7; font-weight: 600;">${ageHint}</span></div>
+                            <div class="stat-row"><span>Eski Takım:</span><span>${oldTeam}</span></div>
+                            <div class="value-box"><div>Maliyet (${costYearHint})</div><div style="font-size:1.2rem; font-weight:700;">€${baseCost.toFixed(1)}m</div></div>
+                            <div class="current-value-box" style="display:${showReveal ? 'block':'none'}"><div>Gerçek Değer</div><div style="color:var(--success); font-size:1.2rem; font-weight:700;">€${currentVal.toFixed(1)}m</div></div>
+                            ${showReveal ? '<div style="text-align:center; font-size:0.75rem; color:var(--gold); margin-top:4px;">🔍 İstatistikler İçin Tıkla</div>' : ''}
+                        </div>
+                        <div style="padding:10px; background:rgba(0,0,0,0.1); display:${(!selectedBy && isMyTurn) ? 'block':'none'}" onclick="event.stopPropagation()">
+                            <button class="btn" style="width:100%;" ${!canAfford ? 'disabled style="background:#ef4444;"' : ''} onclick="submitChoice(${index}, ${baseCost}, ${currentVal})">
+                                ${canAfford ? 'Satın Al' : '❌ Yetersiz Bütçe (FFP Kilit)'}
+                            </button>
+                        </div>
+                    </div>
+                `);
+            });
+
+            if(state.isMod) {
+                const selectedCount = Object.keys(data.selectedInRound || {}).length; const playerCount = Object.keys(data.players).length;
+                if(data.phase === "select" && selectedCount === playerCount) {
+                    btnModNextPhase.innerText = "Kartları Aç ve AI Analiz Et"; btnModNextPhase.style.display = "inline-block";
+                } else if(data.phase === "reveal") {
+                    btnModNextPhase.innerText = data.currentRound >= data.maxRounds ? "Turnuva Sonucunu İlan Et" : "Sonraki Tur (Zar At)";
+                    btnModNextPhase.style.display = "inline-block";
+                } else { btnModNextPhase.style.display = "none"; }
+            }
+        }
+
+        window.submitChoice = async function(cardIndex, baseCost, currentVal) {
+            playSound('buy');
+            const updates = {};
+            updates[`rooms/${state.roomCode}/selectedInRound/${state.myId}`] = cardIndex;
+            updates[`rooms/${state.roomCode}/turnIndex`] = state.currentRoomData.turnIndex + 1;
+            
+            const p = { ...state.currentRoomData.players[state.myId] };
+            if(!state.currentRoomData.isUnlimited) { p.budget -= baseCost; }
+            p.spent += baseCost; p.currentVal += currentVal; 
+            p.currentRoundProfit = currentVal - baseCost; 
+            p.profit = p.currentVal - p.spent; 
+            p.squadPower += currentVal; 
+            
+            updates[`rooms/${state.roomCode}/players/${state.myId}`] = p;
+            await window.dbRefs.update(window.dbRefs.ref(window.db), updates);
+        };
+
+        btnModNextPhase.addEventListener('click', async function() {
+            const currentPhase = state.currentRoomData.phase;
+            if(currentPhase === "select") {
+                await window.dbRefs.update(window.dbRefs.ref(window.db, `rooms/${state.roomCode}`), { phase: "reveal" });
+            } else {
+                if(state.currentRoomData.currentRound >= state.currentRoomData.maxRounds) {
+                    sessionStorage.clear();
+                    await window.dbRefs.update(window.dbRefs.ref(window.db, `rooms/${state.roomCode}`), { status: "finished" });
+                } else {
+                    const nextRound = state.currentRoomData.currentRound + 1;
+                    const size = Object.keys(state.currentRoomData.players).length + 1;
+                    const roundPool = state.currentRoomData.pool.slice((nextRound-1)*size, ((nextRound-1)*size)+size);
+
+                    await window.dbRefs.update(window.dbRefs.ref(window.db, `rooms/${state.roomCode}`), {
+                        currentRound: nextRound, phase: "dice", turnIndex: 0, turnOrder: [],
+                        currentRoundPool: roundPool, selectedInRound: {}, dices: {}
+                    });
+                }
+            }
+        });
+
+        window.openProfileModal = function(index) {
+            if(state.currentRoomData.phase !== 'reveal') return;
+            const player = state.currentRoomData.currentRoundPool[index]; if(!player) return;
+
+            document.getElementById('modalPlayerName').innerText = player.tam_isim;
+            const matches = Math.floor(Math.random() * 15) + 20;
+            const goals = Math.floor(Math.random() * 12); const assists = Math.floor(Math.random() * 10);
+
+            const modalBody = document.getElementById('modalBody');
+            modalBody.innerHTML = `
+                <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--border-color); padding-bottom:5px;"><strong>Mevcut Takım:</strong> <span>${player.su_anki_takim || 'Serbest'}</span></div>
+                <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--border-color); padding-bottom:5px;"><strong>Lig:</strong> <span>${player.su_anki_lig || 'Diğer'}</span></div>
+                <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--border-color); padding-bottom:5px;"><strong>Uyruk:</strong> <span>${player.uyruk || '-'}</span></div>
+                <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--border-color); padding-bottom:5px;"><strong>Sezon Performansı:</strong> <span style="color:var(--primary); font-weight:bold;">${matches} Maç | ${goals} G | ${assists} A</span></div>
+                <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--border-color); padding-bottom:5px;"><strong>Kadro Yetenek Gücü:</strong> <span style="color:var(--gold); font-weight:bold;">${(player.numericPrice || 0).toFixed(1)} Puan</span></div>
+            `;
+            document.getElementById('profileModal').style.display = 'flex';
+        }
+
+        window.closeProfileModal = function() { document.getElementById('profileModal').style.display = 'none'; }
+
+        document.getElementById('btnModEndGame').addEventListener('click', async function() {
+            if(confirm("Turnuvayı sonlandırmak istediğinize emin misiniz?")) {
+                sessionStorage.clear();
+                await window.dbRefs.update(window.dbRefs.ref(window.db, `rooms/${state.roomCode}`), { status: "finished" });
+            }
+        });
+
+        function renderLeaderboard() {
+            const playersList = Object.values(state.currentRoomData.players);
+            
+            if (state.currentRoomData.isSquadMode) {
+                const bestSquadPlayer = [...playersList].sort((a,b) => b.squadPower - a.squadPower)[0];
+                playersList.forEach(p => {
+                    if (p.id === bestSquadPlayer.id) {
+                        p.profit += 50;
+                        p.hasBonus = true;
+                    }
+                });
+            }
+
+            const sorted = playersList.sort((a,b) => b.profit - a.profit);
+            roundInfo.innerHTML = `🏆 Turnuva Dehası: <span style="color:var(--gold)">${sorted[0].name}</span>`;
+            dicePanel.style.display = 'none'; powerupContainer.style.display = 'none';
+            cardsContainer.style.opacity = '1'; cardsContainer.style.pointerEvents = 'auto';
+            
+            cardsContainer.innerHTML = `
+                <div style="grid-column: 1/-1; background:rgba(0,0,0,0.2); padding:15px; border-radius:12px;">
+                    <h3 style="margin-bottom:15px; text-align:center; color:var(--gold);">ScouThink Dehası Sonuç Sıralaması</h3>
+                    <div style="display:flex; flex-direction:column; gap:10px;">
+                        ${sorted.map((p, idx) => `
+                            <div style="display:flex; justify-content:space-between; align-items:center; padding:12px; background:var(--bg-dark); border-radius:6px; border-left:4px solid ${p.color}">
+                                <div>
+                                    <span>${idx + 1}. <strong>${p.name}</strong></span>
+                                    ${p.hasBonus ? '<br><small style="color:var(--gold);">🌟 €50m Kadro Yetenek Gücü Şampiyonu Bonusu!</small>' : ''}
+                                    ${state.currentRoomData.isSquadMode ? `<br><small style="color:var(--text-muted);">Kadro Gücü: ${p.squadPower.toFixed(1)} Puan</small>` : ''}
+                                </div>
+                                <span style="color:${p.profit >= 0 ? 'var(--success)' : 'var(--danger)'}; font-weight:bold;">€${p.profit.toFixed(1)}m</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+            btnModNextPhase.style.display = 'none'; document.getElementById('btnModEndGame').style.display = 'none';
+            sessionStorage.clear();
+        }
+    </script>
+</body>
+</html>
